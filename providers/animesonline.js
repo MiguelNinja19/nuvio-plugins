@@ -73,6 +73,33 @@ function playerPaths(html) {
   }
   return paths.slice(0, 3);
 }
+// Accept only a literal endpoint issued in the current embed document.
+function dataPath(html, embedPath) {
+  const base = embedPath.split('?')[0];
+  for (const m of html.matchAll(/["']((?:https:\/\/anidrive\.click)?\/token\/[a-zA-Z0-9_-]+\/?\?[^"'<>\s]+)["']/g)) {
+    const path = decode(m[1]).replace(PLAYER, '');
+    if (path.split('?')[0] === base && /[?&]player_data=1(?:&|$)/.test(path) && /[?&]player_data_token=[a-f0-9]{64}(?:&|$)/i.test(path)) return path;
+  }
+  return '';
+}
+function jsonSources(text, embedPath, episode) {
+  try {
+    const data = JSON.parse(text);
+    if (data.ok !== true || data.slug !== embedPath.split(/[/?]/)[2] || !Array.isArray(data.sources)) return [];
+    if (typeof data.title !== 'string' || !new RegExp('^one piece dublado (?:episodio )?0*' + episode + '$').test(normalize(data.title))) return [];
+    const result = [];
+    for (const item of data.sources.slice(0, 16)) {
+      if (!item || item.type !== 'video/mp4' || typeof item.file !== 'string') continue;
+      const url = item.file;
+      if (!/^https:\/\/(?:redirector|rr\d+---[a-z0-9-]+)\.googlevideo\.com\/videoplayback\?[^\s\\<>"']+$/i.test(url)) continue;
+      const expiry = /[?&]expire=(\d+)(?:&|$)/.exec(url);
+      if (!expiry || Number(expiry[1]) * 1000 <= Date.now() + 15000 || result.some(s => s.url === url)) continue;
+      const quality = typeof item.label === 'string' && /^\d{3,4}p$/.test(item.label) ? ' · ' + item.label : '';
+      result.push({url, name:'Animes Online', title:'Dublado · PT-BR' + quality, language:'pt-BR'});
+    }
+    return result;
+  } catch (_) { return []; }
+}
 async function getStreams(contentId, mediaType, season, episode) {
   try {
     if (mediaType !== 'tv' && mediaType !== 'series') return [];
@@ -93,12 +120,16 @@ async function getStreams(contentId, mediaType, season, episode) {
     const html = await page(path);
     const result = sources(html);
     for (const embedPath of playerPaths(html)) {
-      for (const stream of sources(await page(embedPath, PLAYER), PLAYER)) {
+      const embed = await page(embedPath, PLAYER);
+      const endpoint = dataPath(embed, embedPath);
+      const streams = sources(embed, PLAYER);
+      if (endpoint) streams.push(...jsonSources(await page(endpoint, PLAYER), embedPath, target.absolute));
+      for (const stream of streams) {
         if (!result.some(item => item.url === stream.url)) result.push(stream);
       }
     }
     return result;
   } catch (_) { return []; }
 }
-if (typeof module !== 'undefined' && module.exports) module.exports = {getStreams, playerPaths};
+if (typeof module !== 'undefined' && module.exports) module.exports = {getStreams, playerPaths, dataPath, jsonSources};
 else globalThis.getStreams = getStreams;

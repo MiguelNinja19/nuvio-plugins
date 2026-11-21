@@ -37,3 +37,7 @@ O Chromium headless também recebeu 403 na busca, na série e no episódio. O ra
 ### Atualização 0.1.2
 
 O HTML de `/5831/` fornecido pelo usuário declara `/?s=` no formulário GET e no `SearchAction`. Também declara o mesmo endereço `anidrive.click/token/…` em `VideoObject.embedUrl` e no `src`/`data-src` de `#pembed iframe`. O provider agora deduplica esses endereços, consulta somente o host AniDrive nessa etapa e procura vídeo explícito na resposta. Não executa scripts, não altera o token e não repassa o iframe ao player nativo. O ZIP de recursos salvo no navegador contém scripts do JW Player, mas não o documento HTML do iframe. O AniDrive retornou 403 no ambiente de teste. A extração final de mídia e a reprodução continuam sem validação real.
+
+### Atualização 0.1.3
+
+Se o HTML do AniDrive publicar a URL literal de `player_data=1` para o mesmo embed, o provider consulta o endpoint e lê `sources[].file`, `label` e `type`. Não gera tokens, não reutiliza cookies e não executa scripts. Se a URL for construída apenas em JavaScript ou houver HTTP 403, essa etapa não funcionará. A amostra JSON recebida é do episódio 002, não do 001; o teste usa dados sintéticos e verifica a rejeição do episódio errado. Sem validação no Nuvio.
