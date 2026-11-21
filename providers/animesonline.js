@@ -73,6 +73,32 @@ function playerPaths(html) {
   }
   return paths.slice(0, 3);
 }
+function unpackPlayer(html) {
+  const decoded = [];
+  for (const m of html.matchAll(/\b_[a-f\d]+\(\s*(\[\s*"[A-Za-z0-9+/=]+"(?:\s*,\s*"[A-Za-z0-9+/=]+")*\s*\])\s*,\s*(\[\s*\d+(?:\s*,\s*\d+)*\s*\])\s*,\s*"([A-Za-z0-9+/=]+)"\s*\)/gi)) {
+    if (decoded.length >= 4 || m[0].length > 300000) break;
+    try {
+      const chunks = JSON.parse(m[1]), order = JSON.parse(m[2]);
+      if (chunks.length !== order.length || new Set(order).size !== chunks.length || order.some(i => i < 0 || i >= chunks.length)) continue;
+      const key = atob(m[3]), bytes = atob(order.map(i => chunks[i]).join(''));
+      if (!key.length) continue;
+      decoded.push(Array.from(bytes, (byte,i) => String.fromCharCode(byte.charCodeAt(0) ^ key.charCodeAt(i % key.length))).join(''));
+    } catch (_) {}
+  }
+  return decoded;
+}
+function embeddedSources(html, embedPath, episode) {
+  const title = /<title\b[^>]*>([^<]+)<\/title>/i.exec(html)?.[1] || '';
+  if (!new RegExp('^one piece dublado (?:episodio )?0*' + episode + '$').test(normalize(title))) return [];
+  const items = [];
+  for (const text of unpackPlayer(html)) {
+    // Only explicit source arrays; ignore arbitrary URLs, download controls and scripts.
+    for (const m of text.matchAll(/(?:["']sources["']|\bsources)\s*:\s*(\[[^\[\]]{1,14000}\])/g)) {
+      try { const list = JSON.parse(m[1]); items.push(...list.slice(0,16)); } catch (_) {}
+    }
+  }
+  return jsonSources(JSON.stringify({ok:true,slug:embedPath.split(/[/?]/)[2],title,sources:items}), embedPath, episode);
+}
 // Accept only a literal endpoint issued in the current embed document.
 function dataPath(html, embedPath) {
   const base = embedPath.split('?')[0];
@@ -122,7 +148,7 @@ async function getStreams(contentId, mediaType, season, episode) {
     for (const embedPath of playerPaths(html)) {
       const embed = await page(embedPath, PLAYER);
       const endpoint = dataPath(embed, embedPath);
-      const streams = sources(embed, PLAYER);
+      const streams = [...sources(embed, PLAYER), ...embeddedSources(embed, embedPath, target.absolute)];
       if (endpoint) streams.push(...jsonSources(await page(endpoint, PLAYER), embedPath, target.absolute));
       for (const stream of streams) {
         if (!result.some(item => item.url === stream.url)) result.push(stream);
@@ -131,5 +157,5 @@ async function getStreams(contentId, mediaType, season, episode) {
     return result;
   } catch (_) { return []; }
 }
-if (typeof module !== 'undefined' && module.exports) module.exports = {getStreams, playerPaths, dataPath, jsonSources};
+if (typeof module !== 'undefined' && module.exports) module.exports = {getStreams, playerPaths, dataPath, jsonSources, embeddedSources};
 else globalThis.getStreams = getStreams;

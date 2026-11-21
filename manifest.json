@@ -1,7 +1,7 @@
 {
   "id": "br.animesonline.nuvio",
   "name": "Animes Online PT-BR (experimental)",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Provider experimental para animes dublados. Prova de conceito: One Piece T1E1.",
-  "scrapers": [{"id":"animesonline-io","name":"Animes Online Dublado","description":"Busca episódios e lê fontes HTTPS explícitas em vídeo HTML.","version":"0.1.3","author":"Nuvio BR","supportedTypes":["tv"],"filename":"providers/animesonline.js","enabled":true,"formats":["mp4","m3u8"],"contentLanguage":["pt"]}]
+  "scrapers": [{"id":"animesonline-io","name":"Animes Online Dublado","description":"Busca episódios e lê fontes HTTPS explícitas em vídeo HTML.","version":"0.1.4","author":"Nuvio BR","supportedTypes":["tv"],"filename":"providers/animesonline.js","enabled":true,"formats":["mp4","m3u8"],"contentLanguage":["pt"]}]
 }

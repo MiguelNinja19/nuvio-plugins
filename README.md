@@ -41,3 +41,7 @@ O HTML de `/5831/` fornecido pelo usuário declara `/?s=` no formulário GET e n
 ### Atualização 0.1.3
 
 Se o HTML do AniDrive publicar a URL literal de `player_data=1` para o mesmo embed, o provider consulta o endpoint e lê `sources[].file`, `label` e `type`. Não gera tokens, não reutiliza cookies e não executa scripts. Se a URL for construída apenas em JavaScript ou houver HTTP 403, essa etapa não funcionará. A amostra JSON recebida é do episódio 002, não do 001; o teste usa dados sintéticos e verifica a rejeição do episódio errado. Sem validação no Nuvio.
+
+### Atualização 0.1.4
+
+Lê estaticamente o formato de empacotamento do HTML AniDrive (ordenação, Base64 e XOR), sem executar JavaScript remoto. Só aceita listas `sources` no formato JSON explícito, com o título do episódio correto, MP4 reconhecido e prazo válido. Não procura URLs arbitrárias no código nem contorna HTTP 403. Testado com fixture sintética; a estrutura exata das fontes no segundo bloco real e a reprodução no Nuvio seguem sem validação.
